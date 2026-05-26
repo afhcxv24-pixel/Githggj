@@ -303,6 +303,25 @@
             color: #88aaff;
             font-size: 0.7rem;
         }
+        .settings-btn {
+            background: linear-gradient(135deg, #2a4a6e, #1a3a5a);
+            width: auto;
+            display: inline-block;
+            margin: 0 auto;
+            padding: 12px 35px;
+            border: 1px solid #ffcc00;
+        }
+        .settings-wrapper {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .disabled-field {
+            opacity: 0.6;
+        }
+        .disabled-field input, .disabled-field textarea {
+            cursor: not-allowed;
+            background: rgba(0, 20, 40, 0.5);
+        }
         @media (max-width: 1100px) {
             .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
         }
@@ -428,25 +447,37 @@
                     <div class="input-group"><input type="text" id="userBotToken" placeholder="توكن البوت"></div>
                     <div class="input-group"><input type="text" id="userPassword" placeholder="كلمة سر التفعيل"></div>
                     <div class="input-group"><input type="number" id="userMaxInput" placeholder="الحد الأقصى للمستخدمين" value="100"></div>
-                    <button onclick="updateUserBot()">💾 حفظ</button>
+                    <button onclick="updateUserBot()" id="saveBotSettingsBtn">💾 حفظ</button>
                     <button onclick="toggleUserBot()" id="userToggleBtn">▶️ تفعيل البوت</button>
                     <div class="stat" id="userBotStatus"></div>
-                </div>
-                <div class="card user-card">
-                    <h3>📝 رسائل بوتك الخاصة</h3>
-                    <div class="input-group"><textarea id="userWelcomeMessage" rows="3" placeholder="رسالة الترحيب"></textarea></div>
-                    <div class="input-group"><textarea id="userHelpMessage" rows="3" placeholder="رسالة المساعدة"></textarea></div>
-                    <button onclick="updateUserMessages()">💾 حفظ رسائلي</button>
                 </div>
             </div>
             <div id="freeWarning" class="free-warning">
                 <p>⚠️ أنت في الإصدار المجاني: يمكنك تشغيل بوت واحد فقط كل 5 أيام</p>
                 <button onclick="scrollToUpgrade()">🚀 اشترك في PRO</button>
             </div>
+
+            <!-- زر الإعدادات المتقدمة -->
+            <div class="settings-wrapper">
+                <button class="settings-btn" onclick="openSettingsModal()">⚙️ الإعدادات المتقدمة</button>
+            </div>
+
             <button onclick="logout()" class="danger-btn">🚪 خروج</button>
         </div>
 
+        <!-- مؤقت المستخدم المخفي -->
         <div class="timer hidden" id="userTimer">🕐 جاري التحميل...</div>
+
+        <!-- نافذة الإعدادات المتقدمة المنبثقة -->
+        <div id="settingsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; justify-content:center; align-items:center;">
+            <div style="background:#0a1a2a; border-radius:28px; max-width:550px; width:90%; padding:25px; border:1px solid #ffcc00;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #00aaff; padding-bottom:10px;">
+                    <h3 style="color:#ffdd55;">⚙️ الإعدادات المتقدمة</h3>
+                    <span style="font-size:28px; cursor:pointer; color:#aaa;" onclick="closeSettingsModal()">&times;</span>
+                </div>
+                <div id="settingsBody"></div>
+            </div>
+        </div>
 
         <div class="footer">
             👨‍💻 STRAVEX | تواصل: <strong>@STRAVEX_vib</strong>
@@ -455,10 +486,7 @@
 
     <script>
         // ========== إعدادات ==========
-        // ⚠️ غيّر هذا الرابط إلى رابط الخادم الخلفي الخاص بك ⚠️
-        // إذا كنت تشغله محلياً: http://localhost:5000
-        // إذا رفعته على Render: https://your-app.onrender.com
-        const API_BASE_URL = "http://192.168.1.7:5000";  // <- غيّر هذا الرابط
+        const API_BASE_URL = "http://192.168.1.7:5000";
         
         const ADMIN_SECRET_CODE = "STRAVEX2025";
         const FREE_KEY = "FREE-KEY";
@@ -471,6 +499,7 @@
         let cooldownInterval = null;
         let expiryInterval = null;
         let userExpiryInterval = null;
+        let botCooldownInterval = null;
         const FREE_COOLDOWN_DAYS = 5;
 
         function generateStars() {
@@ -574,9 +603,50 @@
                 document.getElementById('authScreen').classList.add('hidden');
                 showMessage(`مرحباً ${currentUser} (${isProActive ? 'PRO ⭐' : 'مجاني'})`, 'success');
                 startCooldownTimer();
+                startBotCooldownTimer();
             } else {
                 showMessage(res.error || 'فشل تسجيل الدخول', 'error');
             }
+        }
+
+        // مؤقت خاص بالبوت (5 أيام)
+        function startBotCooldownTimer() {
+            if(botCooldownInterval) clearInterval(botCooldownInterval);
+            
+            function updateBotTimer() {
+                const lastBotRun = localStorage.getItem(`lastBotRun_${currentUser}`);
+                const freeTimerCard = document.getElementById('freeTimerCard');
+                const countdownDisplay = document.getElementById('freeCountdown');
+                
+                if(freeTimerCard && countdownDisplay) {
+                    if(isProActive) {
+                        freeTimerCard.classList.add('hidden');
+                    } else {
+                        freeTimerCard.classList.remove('hidden');
+                        if(lastBotRun) {
+                            const lastRun = parseInt(lastBotRun);
+                            const nextAvailable = lastRun + (FREE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+                            const now = Date.now();
+                            
+                            if(nextAvailable > now) {
+                                const remainingMs = nextAvailable - now;
+                                const days = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
+                                const hours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                                const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+                                const seconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+                                countdownDisplay.innerHTML = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                            } else {
+                                countdownDisplay.innerHTML = `00:00:00:00`;
+                            }
+                        } else {
+                            countdownDisplay.innerHTML = `00:00:00:00`;
+                        }
+                    }
+                }
+            }
+            
+            updateBotTimer();
+            botCooldownInterval = setInterval(updateBotTimer, 1000);
         }
 
         async function upgradeToPro() {
@@ -597,6 +667,7 @@
                 statusDiv.innerHTML = `<div style="color:#00ff88;">✅ ${result.message}</div>`;
                 showMessage('🎉 تم الترقية إلى PRO بنجاح!');
                 await loadUserPanel();
+                startBotCooldownTimer();
             } else {
                 statusDiv.innerHTML = `<div style="color:#ff8866;">❌ ${result.error}</div>`;
                 showMessage(result.error, 'error');
@@ -679,8 +750,17 @@
                 admin_password: document.getElementById('userPassword').value,
                 max_users: parseInt(document.getElementById('userMaxInput').value)
             });
-            if(res.success) showMessage('✅ تم حفظ إعدادات البوت', 'success');
-            else showMessage(res.error || '❌ فشل الحفظ', 'error');
+            if(res.success) {
+                showMessage('✅ تم حفظ إعدادات البوت', 'success');
+                // عند حفظ التوكن بنجاح، سجل وقت التشغيل للمستخدم المجاني
+                if(!isProActive) {
+                    localStorage.setItem(`lastBotRun_${currentUser}`, Date.now().toString());
+                    startBotCooldownTimer();
+                }
+                await loadUserPanel();
+            } else {
+                showMessage(res.error || '❌ فشل الحفظ', 'error');
+            }
         }
 
         async function toggleUserBot() {
@@ -741,40 +821,7 @@
 
         function startCooldownTimer() {
             if(cooldownInterval) clearInterval(cooldownInterval);
-            
-            function updateFreeTimer() {
-                const freeTimerCard = document.getElementById('freeTimerCard');
-                const countdownDisplay = document.getElementById('freeCountdown');
-                
-                if(freeTimerCard && countdownDisplay) {
-                    if(isProActive) {
-                        freeTimerCard.classList.add('hidden');
-                    } else {
-                        freeTimerCard.classList.remove('hidden');
-                        if(lastBotRunTime) {
-                            const lastRun = parseInt(lastBotRunTime);
-                            const nextAvailable = lastRun + (FREE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
-                            const now = Date.now();
-                            
-                            if(nextAvailable > now) {
-                                const remainingMs = nextAvailable - now;
-                                const days = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
-                                const hours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-                                const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
-                                const seconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
-                                countdownDisplay.innerHTML = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                            } else {
-                                countdownDisplay.innerHTML = `00:00:00:00`;
-                            }
-                        } else {
-                            countdownDisplay.innerHTML = `00:00:00:00`;
-                        }
-                    }
-                }
-            }
-            
-            updateFreeTimer();
-            cooldownInterval = setInterval(updateFreeTimer, 1000);
+            // تم دمج المؤقت مع startBotCooldownTimer
         }
 
         async function loadMasterPanel() {
@@ -865,6 +912,7 @@
             if(expiryInterval) clearInterval(expiryInterval);
             if(userExpiryInterval) clearInterval(userExpiryInterval);
             if(cooldownInterval) clearInterval(cooldownInterval);
+            if(botCooldownInterval) clearInterval(botCooldownInterval);
             location.reload(); 
         }
         
@@ -878,6 +926,59 @@
             document.getElementById('loginForm').style.display = 'block';
         }
 
+        // ========== الإعدادات المتقدمة (نافذة منبثقة) ==========
+        function openSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            const body = document.getElementById('settingsBody');
+            
+            if(isProActive || isMaster) {
+                // مستخدم PRO أو مالك - كل الإعدادات متاحة
+                body.innerHTML = `
+                    <div class="input-group"><label>👤 اسم المطور الخاص بك</label><input type="text" id="modalDevName" value="STRAVEX"></div>
+                    <div class="input-group"><label>📝 رسالة الترحيب الخاصة بك</label><textarea id="modalWelcomeMsg" rows="4" placeholder="رسالة الترحيب"></textarea></div>
+                    <div class="input-group"><label>🆘 رسالة المساعدة الخاصة بك</label><textarea id="modalHelpMsg" rows="4" placeholder="رسالة المساعدة"></textarea></div>
+                    <div class="input-group"><label>📊 رسالة الحالة الخاصة بك</label><textarea id="modalStatusMsg" rows="4" placeholder="رسالة الحالة"></textarea></div>
+                    <button onclick="saveUserAdvancedSettings()" class="pro-btn">💾 حفظ الإعدادات</button>
+                `;
+                // تحميل البيانات الحالية
+                document.getElementById('modalWelcomeMsg').value = document.getElementById('userWelcomeMessage').value;
+                document.getElementById('modalHelpMsg').value = document.getElementById('userHelpMessage').value;
+            } else {
+                // مستخدم مجاني - إعدادات مقفلة مع زر ترقية
+                body.innerHTML = `
+                    <div style="background:rgba(255,200,0,0.1); border:1px solid #ffcc00; border-radius:20px; padding:20px; text-align:center;">
+                        🔒 الإعدادات المتقدمة متاحة فقط لمشتركي PRO<br><br>
+                        <button onclick="closeSettingsModal(); scrollToUpgrade();" class="pro-btn">🚀 اشترك في PRO الآن</button>
+                    </div>
+                    <div class="disabled-field"><div class="input-group"><label>🔒 اسم المطور</label><input type="text" value="STRAVEX" disabled></div></div>
+                    <div class="disabled-field"><div class="input-group"><label>🔒 رسالة الترحيب</label><textarea rows="3" disabled>مرحباً! استخدم الأوامر المتاحة</textarea></div></div>
+                    <div class="disabled-field"><div class="input-group"><label>🔒 رسالة المساعدة</label><textarea rows="3" disabled>/start - بدء البوت\n/spam - بدء سبام\n/stop - إيقاف سبام</textarea></div></div>
+                    <div class="disabled-field"><div class="input-group"><label>🔒 رسالة الحالة</label><textarea rows="3" disabled>البوت يعمل بشكل طبيعي</textarea></div></div>
+                `;
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        async function saveUserAdvancedSettings() {
+            const messages = {
+                username: currentUser,
+                welcome_message: document.getElementById('modalWelcomeMsg').value,
+                help_message: document.getElementById('modalHelpMsg').value
+            };
+            const result = await apiCall('/api/update-user-messages', messages);
+            if(result.success) {
+                showMessage('✅ تم حفظ الإعدادات المتقدمة', 'success');
+                closeSettingsModal();
+                await loadUserPanel();
+            } else {
+                showMessage('❌ فشل الحفظ', 'error');
+            }
+        }
+
         setInterval(async () => {
             if(currentUser && !isMaster) {
                 const data = await apiCall('/api/get-user-data', { username: currentUser });
@@ -887,6 +988,7 @@
                         isProActive = data.is_pro;
                         localStorage.setItem('isProActive', isProActive);
                         await loadUserPanel();
+                        startBotCooldownTimer();
                     }
                 }
             }
