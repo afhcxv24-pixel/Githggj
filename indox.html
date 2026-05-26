@@ -322,7 +322,6 @@
             <p class="sub">نظام متكامل لإدارة بوتات فري فاير - اصدار PRO</p>
         </div>
 
-        <!-- شاشة المصادقة -->
         <div id="authScreen">
             <div class="auth-card">
                 <div id="loginForm">
@@ -349,7 +348,6 @@
             </div>
         </div>
 
-        <!-- لوحة المالك -->
         <div id="masterPanel" class="hidden">
             <div class="big-timer">
                 <h3>⏰ صلاحية المالك</h3>
@@ -395,7 +393,6 @@
             <button onclick="logout()" class="danger-btn">🚪 خروج</button>
         </div>
 
-        <!-- لوحة المستخدم العادي -->
         <div id="userPanel" class="hidden">
             <div id="freeTimerCard" class="big-timer">
                 <h3>⏰ الوقت المتبقي لتشغيل بوت جديد (للمستخدم المجاني)</h3>
@@ -458,8 +455,8 @@
 
     <script>
         // ========== إعدادات ==========
-        // ⚠️ هذا المتغير سيتم تعبئته تلقائياً من الرابط الحالي ⚠️
-        const API_BASE_URL = window.location.origin;
+        // تم التعديل: استخدام الخادم الخلفي لموقع RAGNAR (مثل الموقع الأصلي)
+        const API_BASE_URL = "https://RAGNA-BOT-RAGNAR-SYSTEM.hf.space";
         
         const ADMIN_SECRET_CODE = "STRAVEX2025";
         const FREE_KEY = "FREE-KEY";
@@ -893,7 +890,6 @@
             }
         }, 30000);
         
-        // تهيئة العرض
         document.getElementById('loginForm').style.display = 'block';
     </script>
 </body>
