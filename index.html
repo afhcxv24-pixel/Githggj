@@ -483,8 +483,8 @@
 
     <script>
         // ========== إعدادات ==========
-        // الخادم الخارجي الذي سيعمل عليه الموقع (مثل RAGNAR)
-        const API_BASE_URL = "https://RAGNA-BOT-RAGNAR-SYSTEM.hf.space";
+        // ⚠️ قم بتغيير هذا الرابط إلى رابط الخادم الخلفي الخاص بك (مثل https://your-app.onrender.com)
+        const API_BASE_URL = "";   // اتركه فارغاً إذا كان الموقع والخادم على نفس النطاق
         
         const ADMIN_SECRET_CODE = "STRAVEX2025";
         const FREE_KEY = "FREE-KEY";
@@ -497,16 +497,6 @@
         let userExpiryInterval = null;
         let botCooldownInterval = null;
         const FREE_COOLDOWN_DAYS = 5;
-
-        // دوال التخزين المحلي لميزات PRO
-        function loadLocalProData() {
-            const data = localStorage.getItem('stravex_pro_data');
-            if (data) return JSON.parse(data);
-            return { proKeys: {}, userProStatus: {}, userSettings: {} };
-        }
-        function saveLocalProData(data) {
-            localStorage.setItem('stravex_pro_data', JSON.stringify(data));
-        }
 
         function generateStars() {
             const starsContainer = document.getElementById('stars');
@@ -533,7 +523,10 @@
 
         async function apiCall(endpoint, data) {
             try {
-                const url = API_BASE_URL + endpoint;
+                let url = endpoint;
+                if (API_BASE_URL) {
+                    url = API_BASE_URL + endpoint;
+                }
                 const res = await fetch(url, { 
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'}, 
@@ -562,10 +555,6 @@
             if(res.success) { 
                 if(key && key !== FREE_KEY) {
                     showMessage('✅ تم التسجيل والترقية إلى PRO بنجاح', 'success');
-                    // حفظ حالة PRO محلياً
-                    const localData = loadLocalProData();
-                    localData.userProStatus[username] = { isPro: true, expiry: Date.now() + (30*24*60*60*1000) };
-                    saveLocalProData(localData);
                 } else {
                     showMessage('✅ تم التسجيل بنجاح (نسخة مجانية)', 'success');
                 }
@@ -589,11 +578,7 @@
             if(res.success) {
                 currentUser = res.username;
                 isMaster = res.is_master;
-                // التحقق من حالة PRO محلياً
-                const localData = loadLocalProData();
-                const userPro = localData.userProStatus[currentUser];
-                if (userPro && userPro.expiry > Date.now()) isProActive = true;
-                else isProActive = false;
+                isProActive = res.is_pro || false;
                 
                 localStorage.setItem('isProActive', isProActive);
                 
@@ -649,54 +634,49 @@
             botCooldownInterval = setInterval(updateBotTimer, 1000);
         }
 
-        function upgradeToPro() {
+        async function upgradeToPro() {
             const key = document.getElementById('activationKey').value.trim();
             const statusDiv = document.getElementById('activationStatus');
             if(!key) {
                 showMessage('❌ أدخل مفتاح التفعيل', 'error');
                 return;
             }
-            const localData = loadLocalProData();
-            const proKey = localData.proKeys[key];
-            if(!proKey || proKey.used) {
-                statusDiv.innerHTML = `<div style="color:#ff8866;">❌ مفتاح غير صالح</div>`;
-                showMessage('❌ مفتاح غير صالح', 'error');
-                return;
+            showMessage('⏳ جاري الترقية...', 'success');
+            const result = await apiCall('/api/upgrade-to-pro', { username: currentUser, code: key });
+            if(result.success) {
+                isProActive = true;
+                localStorage.setItem('isProActive', 'true');
+                statusDiv.innerHTML = `<div style="color:#00ff88;">✅ ${result.message}</div>`;
+                showMessage('🎉 تم الترقية إلى PRO بنجاح!');
+                await loadUserPanel();
+                startBotCooldownTimer();
+            } else {
+                statusDiv.innerHTML = `<div style="color:#ff8866;">❌ ${result.error}</div>`;
+                showMessage(result.error, 'error');
             }
-            const days = proKey.days || 30;
-            const expiry = Date.now() + (days * 24*60*60*1000);
-            proKey.used = true;
-            localData.userProStatus[currentUser] = { isPro: true, expiry: expiry };
-            saveLocalProData(localData);
-            isProActive = true;
-            localStorage.setItem('isProActive', 'true');
-            statusDiv.innerHTML = `<div style="color:#00ff88;">✅ تم الترقية إلى PRO لمدة ${days} يوم</div>`;
-            showMessage('🎉 تم الترقية إلى PRO!', 'success');
-            loadUserPanel();
-            startBotCooldownTimer();
             setTimeout(() => statusDiv.innerHTML = '', 4000);
         }
 
-        function generateKey() {
+        async function generateKey() {
             const days = parseInt(document.getElementById('keyExpiryDays').value);
             const newKey = `PRO-${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Date.now()}`;
-            const localData = loadLocalProData();
-            localData.proKeys[newKey] = { days: days, used: false, created_at: new Date().toISOString() };
-            saveLocalProData(localData);
-            showMessage(`✅ تم إنشاء مفتاح PRO: ${newKey}`, 'success');
-            refreshKeys();
+            const res = await apiCall('/api/generate-pro-key', { key: newKey, expiry_days: days, admin_key: ADMIN_SECRET_CODE });
+            if(res.success) {
+                showMessage(`✅ تم إنشاء مفتاح PRO: ${newKey}`, 'success');
+                await refreshKeys();
+            } else {
+                showMessage(res.error || '❌ فشل في إنشاء المفتاح', 'error');
+            }
         }
 
-        function deleteKey(key) {
+        async function deleteKey(key) {
             if(confirm(`حذف المفتاح ${key}؟`)) {
-                const localData = loadLocalProData();
-                if (localData.proKeys[key]) {
-                    delete localData.proKeys[key];
-                    saveLocalProData(localData);
+                const res = await apiCall('/api/delete-pro-key', { key: key, admin_key: ADMIN_SECRET_CODE });
+                if(res.success) {
                     showMessage('✅ تم الحذف', 'success');
-                    refreshKeys();
+                    await refreshKeys();
                 } else {
-                    showMessage('❌ المفتاح غير موجود', 'error');
+                    showMessage(res.error || 'فشل الحذف', 'error');
                 }
             }
         }
@@ -736,12 +716,13 @@
         }
 
         async function updateUserMessages() {
-            const localData = loadLocalProData();
-            if(!localData.userSettings[currentUser]) localData.userSettings[currentUser] = {};
-            localData.userSettings[currentUser].welcome = document.getElementById('userWelcomeMessage').value;
-            localData.userSettings[currentUser].help = document.getElementById('userHelpMessage').value;
-            saveLocalProData(localData);
-            showMessage('✅ تم حفظ رسائلك الخاصة (محلياً)', 'success');
+            const res = await apiCall('/api/update-user-messages', { 
+                username: currentUser,
+                welcome_message: document.getElementById('userWelcomeMessage').value, 
+                help_message: document.getElementById('userHelpMessage').value 
+            });
+            if(res.success) showMessage('✅ تم حفظ رسائلك الخاصة', 'success');
+            else showMessage(res.error || 'فشل الحفظ', 'error');
         }
 
         async function updateUserBot() {
@@ -826,16 +807,20 @@
             document.getElementById('welcomeMessage').value = owner.welcome_message || '';
             document.getElementById('helpMessage').value = owner.help_message || '';
             
-            const localData = loadLocalProData();
-            const keysList = Object.entries(localData.proKeys).map(([k, v]) => ({ key: k, used: v.used, days: v.days }));
-            document.getElementById('keysCount').innerText = keysList.filter(k => !k.used).length;
-            document.getElementById('totalKeys').innerText = keysList.length;
+            const keys = await apiCall('/api/get-all-pro-keys', { admin_key: ADMIN_SECRET_CODE });
+            document.getElementById('keysCount').innerText = keys.available_count || 0;
+            document.getElementById('totalKeys').innerText = keys.total || 0;
+            
             let html = '';
-            keysList.forEach(k => {
-                const status = k.used ? '✅ مستخدم' : '🟢 جديد';
-                html += `<div class="key-item">🔑 ${k.key.substring(0,30)}... (${status}) <span class="delete-key" onclick="deleteKey('${k.key}')">🗑️</span></div>`;
-            });
-            document.getElementById('allKeysList').innerHTML = html || '<div class="key-item">لا توجد مفاتيح PRO</div>';
+            if(keys.keys && keys.keys.length > 0) {
+                keys.keys.forEach(k => {
+                    const status = k.used ? '✅ مستخدم' : '🟢 جديد';
+                    html += `<div class="key-item">🔑 ${k.key.substring(0, 30)}... (${status}) <span class="delete-key" onclick="deleteKey('${k.key}')">🗑️</span></div>`;
+                });
+            } else {
+                html = '<div class="key-item">لا توجد مفاتيح PRO</div>';
+            }
+            document.getElementById('allKeysList').innerHTML = html;
             
             const users = await apiCall('/api/bot-runner-data', { key: 'RAGNAR-BOT-RUNNER-KEY-2025' });
             if(users.users && users.users.length > 0) {
@@ -915,12 +900,10 @@
             const body = document.getElementById('settingsBody');
             
             if(isProActive || isMaster) {
-                const localData = loadLocalProData();
-                const userSettings = (localData.userSettings[currentUser] || {});
                 body.innerHTML = `
                     <div class="input-group"><label>👤 اسم المطور الخاص بك</label><input type="text" id="modalDevName" value="STRAVEX"></div>
-                    <div class="input-group"><label>📝 رسالة الترحيب الخاصة بك</label><textarea id="modalWelcomeMsg" rows="4" placeholder="رسالة الترحيب">${userSettings.welcome || document.getElementById('userWelcomeMessage').value}</textarea></div>
-                    <div class="input-group"><label>🆘 رسالة المساعدة الخاصة بك</label><textarea id="modalHelpMsg" rows="4" placeholder="رسالة المساعدة">${userSettings.help || document.getElementById('userHelpMessage').value}</textarea></div>
+                    <div class="input-group"><label>📝 رسالة الترحيب الخاصة بك</label><textarea id="modalWelcomeMsg" rows="4">${document.getElementById('userWelcomeMessage').value}</textarea></div>
+                    <div class="input-group"><label>🆘 رسالة المساعدة الخاصة بك</label><textarea id="modalHelpMsg" rows="4">${document.getElementById('userHelpMessage').value}</textarea></div>
                     <button onclick="saveUserAdvancedSettings()" class="pro-btn">💾 حفظ الإعدادات</button>
                 `;
             } else {
@@ -941,18 +924,20 @@
             document.getElementById('settingsModal').style.display = 'none';
         }
 
-        function saveUserAdvancedSettings() {
-            const welcomeMsg = document.getElementById('modalWelcomeMsg').value;
-            const helpMsg = document.getElementById('modalHelpMsg').value;
-            const localData = loadLocalProData();
-            if(!localData.userSettings[currentUser]) localData.userSettings[currentUser] = {};
-            localData.userSettings[currentUser].welcome = welcomeMsg;
-            localData.userSettings[currentUser].help = helpMsg;
-            saveLocalProData(localData);
-            document.getElementById('userWelcomeMessage').value = welcomeMsg;
-            document.getElementById('userHelpMessage').value = helpMsg;
-            showMessage('✅ تم حفظ الإعدادات المتقدمة (محلياً)', 'success');
-            closeSettingsModal();
+        async function saveUserAdvancedSettings() {
+            const messages = {
+                username: currentUser,
+                welcome_message: document.getElementById('modalWelcomeMsg').value,
+                help_message: document.getElementById('modalHelpMsg').value
+            };
+            const result = await apiCall('/api/update-user-messages', messages);
+            if(result.success) {
+                showMessage('✅ تم حفظ الإعدادات المتقدمة', 'success');
+                closeSettingsModal();
+                await loadUserPanel();
+            } else {
+                showMessage('❌ فشل الحفظ', 'error');
+            }
         }
 
         setInterval(async () => {
@@ -960,6 +945,12 @@
                 const data = await apiCall('/api/get-user-data', { username: currentUser });
                 if(data && data.success !== false) {
                     updateUserBotStatus(data.is_active);
+                    if(data.is_pro !== isProActive) {
+                        isProActive = data.is_pro;
+                        localStorage.setItem('isProActive', isProActive);
+                        await loadUserPanel();
+                        startBotCooldownTimer();
+                    }
                 }
             }
         }, 30000);
