@@ -2,113 +2,385 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>RAGNAR API | إدارة البوتات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+    <title>RAGNAR x STRAVEX</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #0a0f1e;
-            color: #00ffcc;
-            font-family: monospace;
+            background: linear-gradient(135deg, #0a0a1f 0%, #1a0033 50%, #0f0f2a 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
-            padding: 2rem;
+            align-items: center;
+            padding: 20px;
         }
-        .card {
-            background: #0f1424;
-            border: 1px solid #00ffcc33;
-            border-radius: 1rem;
-            padding: 2rem;
+        .container {
+            background: rgba(10, 10, 30, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 40px;
             max-width: 800px;
             width: 100%;
         }
-        input, textarea {
-            width: 100%;
-            padding: 0.5rem;
-            margin: 0.5rem 0;
-            background: #05070f;
-            border: 1px solid #00ffcc;
-            color: #00ffcc;
-            border-radius: 0.5rem;
-        }
-        button {
-            background: #00ffcc;
-            color: #0a0f1e;
-            padding: 0.5rem;
-            border: none;
-            cursor: pointer;
-            border-radius: 0.5rem;
-        }
-        .user-card {
-            border: 1px solid #ffcc00;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
+        h1, h3 { text-align: center; margin-bottom: 20px; }
+        h1 { background: linear-gradient(135deg, #ff6a00, #7b2ff7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; color: #00d4ff; margin-bottom: 8px; }
+        input, select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.6); border: 1px solid #7b2ff7; border-radius: 12px; color: white; }
+        button { width: 100%; padding: 14px; background: linear-gradient(135deg, #7b2ff7, #ff6a00); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .switch { text-align: center; margin-top: 20px; color: #ff6a00; cursor: pointer; }
+        .card { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        .stat { display: flex; justify-content: space-between; padding: 10px; background: rgba(255,106,0,0.1); border-radius: 10px; margin-bottom: 10px; }
+        .message { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 12px; z-index: 1000; }
+        .success { background: rgba(0,212,255,0.2); border: 1px solid #00d4ff; color: #00d4ff; }
+        .error { background: rgba(255,0,0,0.2); border: 1px solid red; color: red; }
+        .hidden { display: none; }
+        .key-item { background: rgba(255,106,0,0.2); padding: 8px; margin: 5px 0; border-radius: 8px; font-family: monospace; display: flex; justify-content: space-between; align-items: center; }
+        .keys-container { max-height: 300px; overflow-y: auto; }
+        .delete-key { background: #ff0000; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        .timer { font-size: 20px; font-weight: bold; text-align: center; color: #ff6a00; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 12px; }
+        .free-key-info { background: linear-gradient(135deg, #00ff00, #008000); text-align: center; padding: 10px; border-radius: 12px; margin-bottom: 20px; }
+        .free-key-info span { color: white; font-weight: bold; }
+        .warning-text { color: #ff6a00; font-size: 12px; margin-top: 5px; }
+        .owner-badge { background: #ff6a00; color: black; padding: 2px 8px; border-radius: 20px; font-size: 10px; margin-right: 10px; }
+        .owner-card { border: 1px solid #ff6a00; background: rgba(255,106,0,0.1); }
+        .user-card { border: 1px solid #00d4ff; background: rgba(0,212,255,0.05); }
     </style>
 </head>
 <body>
-<div class="card">
-    <h1>⚡ RAGNAR CONTROL v1.0</h1>
-    <p>🔑 <strong>API Endpoint:</strong> /api/bot-runner-data</p>
-    <p>🔐 <strong>Master Key:</strong> RAGNAR-BOT-RUNNER-KEY-2025</p>
+<div class="container" id="app">
+    <h1>🪓 RAGNAR x STRAVEX 🐺</h1>
 
-    <div class="user-card">
-        <h3>➕ إضافة / تحديث بوت</h3>
-        <input type="text" id="username" placeholder="اسم البوت (مثال: bot1)">
-        <input type="text" id="token" placeholder="توكن البوت (من @BotFather)">
-        <input type="text" id="owner_id" placeholder="أيدي المالك">
-        <input type="text" id="owner_name" placeholder="اسم المالك">
-        <textarea id="welcome_message" rows="2" placeholder="رسالة الترحيب"></textarea>
-        <textarea id="help_message" rows="2" placeholder="رسالة المساعدة"></textarea>
-        <button onclick="addOrUpdateBot()">💾 حفظ البوت</button>
+    <div id="authScreen">
+        <div id="loginForm">
+            <h3>🔐 تسجيل الدخول</h3>
+            <div class="input-group"><input type="text" id="loginUsername" placeholder="اسم المستخدم"></div>
+            <div class="input-group"><input type="password" id="loginPassword" placeholder="كلمة السر"></div>
+            <button onclick="login()">دخول</button>
+            <div class="switch" onclick="showRegister()">ليس لديك حساب؟ سجل الآن</div>
+        </div>
+        <div id="registerForm" class="hidden">
+            <h3>📝 تسجيل جديد</h3>
+            <div class="free-key-info"><span>🎁 مفتاح مجاني: FREE-KEY (صلاحية 7 أيام)</span></div>
+            <div class="input-group"><input type="text" id="regUsername" placeholder="اسم المستخدم"></div>
+            <div class="input-group"><input type="password" id="regPassword" placeholder="كلمة السر"></div>
+            <div class="input-group"><input type="text" id="regKey" placeholder="المفتاح (KEY)"></div>
+            <button onclick="register()">تسجيل</button>
+            <div class="switch" onclick="showLogin()">لديك حساب؟ سجل دخول</div>
+        </div>
     </div>
 
-    <div>
-        <h3>📋 قائمة البوتات المسجلة</h3>
-        <pre id="usersList" style="background:#05070f; padding:1rem; border-radius:0.5rem; overflow:auto;">جاري التحميل...</pre>
-        <button onclick="fetchUsers()">🔄 تحديث</button>
+    <!-- لوحة المالك -->
+    <div id="masterPanel" class="hidden">
+        <h3>⚡ لوحة المالك <span class="owner-badge">OWNER</span></h3>
+        <div class="timer" id="ownerTimer">🕐 جاري التحميل...</div>
+        
+        <div class="card owner-card">
+            <h3>👑 معلومات المالك العامة</h3>
+            <div class="input-group"><input type="text" id="ownerId" placeholder="أيدي المالك"></div>
+            <div class="input-group"><input type="text" id="ownerName" placeholder="اسم المالك"></div>
+            <button onclick="updateOwnerInfo()">💾 حفظ</button>
+        </div>
+
+        <div class="card owner-card">
+            <h3>🔑 إدارة المفاتيح</h3>
+            <div class="stat"><span>المفاتيح المتبقية:</span><span id="keysCount">0</span></div>
+            <div class="stat"><span>إجمالي المفاتيح:</span><span id="totalKeys">0</span></div>
+            <div class="input-group"><label>مدة الصلاحية (أيام)</label><select id="keyExpiryDays"><option value="1">يوم</option><option value="7" selected>7 أيام</option><option value="14">14 يوم</option><option value="30">30 يوم</option></select></div>
+            <button onclick="generateKey()">➕ إنشاء مفتاح</button>
+            <button onclick="refreshKeys()">🔍 عرض الكل</button>
+            <div id="allKeysList" class="keys-container" style="margin-top:15px"></div>
+        </div>
+
+        <div class="card owner-card">
+            <h3>📝 رسائل البوت العامة</h3>
+            <div class="input-group"><textarea id="welcomeMessage" rows="2" placeholder="رسالة الترحيب"></textarea></div>
+            <div class="input-group"><textarea id="helpMessage" rows="2" placeholder="رسالة المساعدة"></textarea></div>
+            <button onclick="updateMessages()">💾 حفظ</button>
+        </div>
+
+        <div class="card owner-card">
+            <h3>📋 جميع المستخدمين</h3>
+            <div id="usersList"></div>
+        </div>
+        
+        <button onclick="logout()">🚪 خروج</button>
+    </div>
+
+    <!-- لوحة المستخدم العادي -->
+    <div id="userPanel" class="hidden">
+        <h3>مرحباً <span id="userName"></span> 👋</h3>
+        
+        <!-- معلومات المالك الخاصة بالمستخدم -->
+        <div class="card user-card">
+            <h3>👑 معلومات المالك الخاصة بك</h3>
+            <div class="stat"><span>🆔 أيدي المالك:</span><span id="userOwnerIdDisplay">-</span></div>
+            <div class="stat"><span>👤 اسم المالك:</span><span id="userOwnerNameDisplay">-</span></div>
+            <div class="input-group"><input type="text" id="userOwnerId" placeholder="أيدي المالك الجديد"></div>
+            <div class="input-group"><input type="text" id="userOwnerName" placeholder="اسم المالك الجديد"></div>
+            <button onclick="updateUserOwnerInfo()">💾 حفظ معلوماتي</button>
+            <div class="warning-text">💡 هذه المعلومات تظهر لمستخدمي بوتك فقط</div>
+        </div>
+
+        <!-- المؤقت -->
+        <div class="timer" id="userTimer">🕐 جاري التحميل...</div>
+
+        <!-- إحصائيات البوت -->
+        <div class="card user-card">
+            <h3>📊 إحصائيات بوتك</h3>
+            <div class="stat"><span>المستخدمون المفعلون:</span><span id="userActiveUsers">0</span></div>
+            <div class="stat"><span>الحد الأقصى:</span><span id="userMaxUsers">0</span></div>
+            <div class="stat"><span>صلاحية البوت:</span><span id="userExpiry">غير محددة</span></div>
+        </div>
+
+        <!-- إعدادات البوت -->
+        <div class="card user-card">
+            <h3>⚙️ إعدادات بوتك</h3>
+            <div class="input-group"><input type="text" id="userBotToken" placeholder="توكن البوت"></div>
+            <div class="input-group"><input type="text" id="userPassword" placeholder="كلمة سر التفعيل"></div>
+            <div class="input-group"><input type="number" id="userMaxInput" placeholder="100"></div>
+            <button onclick="updateUserBot()">💾 حفظ</button>
+            <button onclick="toggleUserBot()" id="userToggleBtn">▶️ تفعيل البوت</button>
+            <div class="stat" id="userBotStatus"></div>
+        </div>
+
+        <!-- رسائل البوت الخاصة -->
+        <div class="card user-card">
+            <h3>📝 رسائل بوتك الخاصة</h3>
+            <div class="input-group"><textarea id="userWelcomeMessage" rows="2" placeholder="رسالة الترحيب"></textarea></div>
+            <div class="input-group"><textarea id="userHelpMessage" rows="2" placeholder="رسالة المساعدة"></textarea></div>
+            <button onclick="updateUserMessages()">💾 حفظ رسائلي</button>
+        </div>
+
+        <button onclick="logout()">🚪 خروج</button>
     </div>
 </div>
 
 <script>
-    const API_URL = window.location.origin + "/api/bot-runner-data";
-    const API_KEY = "RAGNAR-BOT-RUNNER-KEY-2025";
+    let currentUser = null;
+    let isMaster = false;
+    let expiryInterval = null;
+    let userExpiryInterval = null;
 
-    async function fetchUsers() {
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({key: API_KEY})
+    function showMessage(msg, type) {
+        const d = document.createElement('div');
+        d.className = `message ${type}`;
+        d.innerText = msg;
+        document.body.appendChild(d);
+        setTimeout(() => d.remove(), 3000);
+    }
+
+    async function apiCall(endpoint, data) {
+        const res = await fetch(endpoint, { 
+            method: 'POST', headers: {'Content-Type':'application/json'}, 
+            body: JSON.stringify(data) 
         });
-        const data = await res.json();
-        if(data.users) {
-            document.getElementById('usersList').innerHTML = JSON.stringify(data.users, null, 2);
-        } else {
-            document.getElementById('usersList').innerHTML = '⚠️ لا توجد بيانات';
+        return res.json();
+    }
+
+    async function generateKey() {
+        const days = parseInt(document.getElementById('keyExpiryDays').value);
+        const newKey = `KEY-${Math.floor(Math.random() * 1000000)}`;
+        const res = await apiCall('/api/generate-key', { key: newKey, expiry_days: days });
+        if(res.success) {
+            showMessage(`✅ تم إنشاء ${newKey}`, 'success');
+            await refreshKeys();
+        } else showMessage('❌ فشل', 'error');
+    }
+
+    async function deleteKey(key) {
+        if(confirm(`حذف ${key}؟`)) {
+            const res = await apiCall('/api/delete-key', { key: key });
+            if(res.success) {
+                showMessage('✅ تم الحذف', 'success');
+                await refreshKeys();
+            }
         }
     }
 
-    async function addOrUpdateBot() {
-        const newUser = {
-            username: document.getElementById('username').value,
-            token: document.getElementById('token').value,
-            owner_id: document.getElementById('owner_id').value,
-            owner_name: document.getElementById('owner_name').value,
-            welcome_message: document.getElementById('welcome_message').value,
-            help_message: document.getElementById('help_message').value,
-            is_active: true,
-            max_users: 100
-        };
-
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({key: API_KEY, add_user: newUser})
+    async function updateOwnerInfo() {
+        const res = await apiCall('/api/update-owner-info', { 
+            owner_id: document.getElementById('ownerId').value, 
+            owner_name: document.getElementById('ownerName').value 
         });
-        const result = await res.json();
-        alert(result.message || "تمت العملية");
-        fetchUsers();
+        if(res.success) showMessage('✅ تم الحفظ', 'success');
     }
 
-    fetchUsers();
+    async function updateUserOwnerInfo() {
+        const res = await apiCall('/api/update-user-owner-info', { 
+            username: currentUser,
+            owner_id: document.getElementById('userOwnerId').value, 
+            owner_name: document.getElementById('userOwnerName').value 
+        });
+        if(res.success) {
+            showMessage('✅ تم حفظ معلوماتك', 'success');
+            await loadUserPanel();
+        }
+    }
+
+    async function updateMessages() {
+        const res = await apiCall('/api/update-messages', { 
+            welcome_message: document.getElementById('welcomeMessage').value, 
+            help_message: document.getElementById('helpMessage').value 
+        });
+        if(res.success) showMessage('✅ تم الحفظ', 'success');
+    }
+
+    async function updateUserMessages() {
+        const res = await apiCall('/api/update-user-messages', { 
+            username: currentUser,
+            welcome_message: document.getElementById('userWelcomeMessage').value, 
+            help_message: document.getElementById('userHelpMessage').value 
+        });
+        if(res.success) showMessage('✅ تم حفظ رسائلك', 'success');
+    }
+
+    async function register() {
+        const res = await apiCall('/api/register', { 
+            username: document.getElementById('regUsername').value, 
+            password: document.getElementById('regPassword').value, 
+            key: document.getElementById('regKey').value 
+        });
+        if(res.success) { showMessage('✅ تم التسجيل', 'success'); showLogin(); }
+        else showMessage(res.error, 'error');
+    }
+
+    async function login() {
+        const res = await apiCall('/api/login', { 
+            username: document.getElementById('loginUsername').value, 
+            password: document.getElementById('loginPassword').value 
+        });
+        if(res.success) {
+            currentUser = res.username;
+            isMaster = res.is_master;
+            if(isMaster) {
+                await loadMasterPanel();
+                document.getElementById('masterPanel').classList.remove('hidden');
+                startOwnerTimer(res.owner_expiry);
+            } else {
+                await loadUserPanel();
+                document.getElementById('userPanel').classList.remove('hidden');
+            }
+            document.getElementById('authScreen').classList.add('hidden');
+            showMessage(`مرحباً ${currentUser}`, 'success');
+        } else showMessage(res.error, 'error');
+    }
+
+    function startOwnerTimer(expiryDate) {
+        if(expiryInterval) clearInterval(expiryInterval);
+        function update() {
+            const remaining = new Date(expiryDate) - new Date();
+            if(remaining <= 0) { document.getElementById('ownerTimer').innerHTML = '⚠️ انتهت الصلاحية'; return; }
+            const d = Math.floor(remaining/86400000), h = Math.floor((remaining%86400000)/3600000), m = Math.floor((remaining%3600000)/60000);
+            document.getElementById('ownerTimer').innerHTML = `⏰ متبقي للمالك: ${d} يوم ${h} ساعة ${m} دقيقة`;
+        }
+        update();
+        expiryInterval = setInterval(update, 1000);
+    }
+
+    function startUserTimer(expiryDate) {
+        if(userExpiryInterval) clearInterval(userExpiryInterval);
+        function update() {
+            const remaining = new Date(expiryDate) - new Date();
+            if(remaining <= 0) { document.getElementById('userTimer').innerHTML = '⚠️ انتهت صلاحية حسابك'; return; }
+            const d = Math.floor(remaining/86400000), h = Math.floor((remaining%86400000)/3600000), m = Math.floor((remaining%3600000)/60000);
+            document.getElementById('userTimer').innerHTML = `⏰ متبقي لحسابك: ${d} يوم ${h} ساعة ${m} دقيقة`;
+        }
+        update();
+        userExpiryInterval = setInterval(update, 1000);
+    }
+
+    async function loadMasterPanel() {
+        const owner = await apiCall('/api/get-owner-info', {});
+        document.getElementById('ownerId').value = owner.owner_id || '';
+        document.getElementById('ownerName').value = owner.owner_name || '';
+        document.getElementById('welcomeMessage').value = owner.welcome_message || '';
+        document.getElementById('helpMessage').value = owner.help_message || '';
+        
+        const keys = await apiCall('/api/get-all-keys', {});
+        document.getElementById('keysCount').innerText = keys.available_count || 0;
+        document.getElementById('totalKeys').innerText = keys.total || 0;
+        
+        let html = '';
+        keys.keys.forEach(k => {
+            html += `<div class="key-item">🔑 ${k.key} <span class="delete-key" onclick="deleteKey('${k.key}')">🗑️</span></div>`;
+        });
+        document.getElementById('allKeysList').innerHTML = html || 'لا توجد مفاتيح';
+        
+        const users = await apiCall('/api/bot-runner-data', { key: 'RAGNAR-BOT-RUNNER-KEY-2025' });
+        if(users.users) {
+            let usersHtml = '';
+            users.users.forEach(u => {
+                usersHtml += `<div class="stat"><span><b>${u.username}</b></span><span>👤 مالكه: ${u.owner_name || '-'}</span></div>`;
+            });
+            document.getElementById('usersList').innerHTML = usersHtml || 'لا يوجد';
+        }
+    }
+
+    async function loadUserPanel() {
+        const owner = await apiCall('/api/get-owner-info', {});
+        document.getElementById('userWelcomeMessage').value = owner.welcome_message || '';
+        document.getElementById('userHelpMessage').value = owner.help_message || '';
+        
+        const userOwner = await apiCall('/api/get-user-owner-info', { username: currentUser });
+        if(userOwner) {
+            document.getElementById('userOwnerIdDisplay').innerText = userOwner.owner_id || '-';
+            document.getElementById('userOwnerNameDisplay').innerText = userOwner.owner_name || '-';
+            document.getElementById('userOwnerId').value = userOwner.owner_id || '';
+            document.getElementById('userOwnerName').value = userOwner.owner_name || '';
+        }
+        
+        const data = await apiCall('/api/get-user-data', { username: currentUser });
+        document.getElementById('userName').innerText = currentUser;
+        document.getElementById('userBotToken').value = data.token || '';
+        document.getElementById('userPassword').value = data.admin_password || '';
+        document.getElementById('userMaxInput').value = data.max_users || 100;
+        document.getElementById('userActiveUsers').innerText = data.active_users || 0;
+        document.getElementById('userMaxUsers').innerText = data.max_users || 100;
+        if(data.expiry_date) {
+            document.getElementById('userExpiry').innerHTML = new Date(data.expiry_date).toLocaleDateString('ar');
+            startUserTimer(data.expiry_date);
+        }
+        updateUserBotStatus(data.is_active);
+    }
+
+    async function updateUserBot() {
+        const res = await apiCall('/api/update-user-bot', {
+            username: currentUser,
+            token: document.getElementById('userBotToken').value,
+            admin_password: document.getElementById('userPassword').value,
+            max_users: parseInt(document.getElementById('userMaxInput').value)
+        });
+        if(res.success) showMessage('✅ تم الحفظ', 'success');
+    }
+
+    async function toggleUserBot() {
+        const res = await apiCall('/api/toggle-user-bot', { username: currentUser });
+        if(res.success) updateUserBotStatus(res.is_active);
+    }
+
+    function updateUserBotStatus(isActive) {
+        const btn = document.getElementById('userToggleBtn');
+        const status = document.getElementById('userBotStatus');
+        if(isActive) {
+            btn.textContent = '⏸️ تعطيل البوت';
+            status.innerHTML = '🟢 البوت مفعل';
+        } else {
+            btn.textContent = '▶️ تفعيل البوت';
+            status.innerHTML = '🔴 البوت معطل';
+        }
+    }
+
+    async function refreshKeys() {
+        await loadMasterPanel();
+        showMessage('✅ تم التحديث', 'success');
+    }
+
+    function logout() { location.reload(); }
+    function showRegister() { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('registerForm').classList.remove('hidden'); }
+    function showLogin() { document.getElementById('registerForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); }
 </script>
 </body>
 </html>
